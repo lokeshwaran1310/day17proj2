@@ -88,7 +88,11 @@ public class RoomService {
   
 
     public Page<RoomResponseDto> getAllRoomsPaginated(Pageable pageable) {
-        return roomRepository.findAll(pageable).map(this::convertToDto);
+        Page<RoomResponseDto> rooms = roomRepository.findAll(pageable).map(this::convertToDto);
+        if (rooms.isEmpty()) {
+            throw new RoomNotFoundException("No rooms found for the requested page");
+        }
+        return rooms;
     }
 
     public MetaData getMetaData(Pageable pageable) {
@@ -98,7 +102,7 @@ public class RoomService {
     }
 
     public Page<RoomResponseDto> searchRooms(String roomNumber, String status, String roomType, Pageable pageable) {
-        return roomRepository.findAll(pageable).stream()
+        Page<RoomResponseDto> results = roomRepository.findAll(pageable).stream()
                 .filter(room -> (roomNumber == null || room.getRoomNumber().contains(roomNumber)) &&
                                (status == null || room.getStatus().equalsIgnoreCase(status)) &&
                                (roomType == null || room.getRoomType().equalsIgnoreCase(roomType)))
@@ -109,6 +113,11 @@ public class RoomService {
                 .map(this::convertToDto)
                 .collect(Collectors.collectingAndThen(Collectors.toList(), 
                     list -> new org.springframework.data.domain.PageImpl<>(list, pageable, roomRepository.count())));
+        
+        if (results.isEmpty()) {
+            throw new RoomNotFoundException("No rooms found matching search criteria");
+        }
+        return results;
     }
 
     public Page<RoomResponseDto> changeDefaultIndex(Pageable pageable) {

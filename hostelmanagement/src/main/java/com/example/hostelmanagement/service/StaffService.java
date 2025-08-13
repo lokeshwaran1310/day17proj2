@@ -66,7 +66,11 @@ public class StaffService {
     }
 
     public Page<StaffResponseDto> getAllStaffPaginated(Pageable pageable) {
-        return staffRepository.findAll(pageable).map(this::convertToDto);
+        Page<StaffResponseDto> staff = staffRepository.findAll(pageable).map(this::convertToDto);
+        if (staff.isEmpty()) {
+            throw new StaffNotFoundException("No staff found for the requested page");
+        }
+        return staff;
     }
 
     public MetaData getMetaData(Pageable pageable) {
@@ -76,7 +80,7 @@ public class StaffService {
     }
 
     public Page<StaffResponseDto> searchStaff(String name, String role, String shift, Pageable pageable) {
-        return staffRepository.findAll(pageable).stream()
+        Page<StaffResponseDto> results = staffRepository.findAll(pageable).stream()
                 .filter(staff -> (name == null || staff.getName().contains(name)) &&
                                 (role == null || staff.getRole().equalsIgnoreCase(role)) &&
                                 (shift == null || staff.getShift().equalsIgnoreCase(shift)))
@@ -87,6 +91,11 @@ public class StaffService {
                 .map(this::convertToDto)
                 .collect(Collectors.collectingAndThen(Collectors.toList(), 
                     list -> new org.springframework.data.domain.PageImpl<>(list, pageable, staffRepository.count())));
+        
+        if (results.isEmpty()) {
+            throw new StaffNotFoundException("No staff found matching search criteria");
+        }
+        return results;
     }
 
     public Page<StaffResponseDto> changeDefaultIndex(Pageable pageable) {

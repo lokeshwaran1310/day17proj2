@@ -58,7 +58,11 @@ public class StudentService {
     }
 
     public Page<StudentResponseDto> getAllStudentsPaginated(Pageable pageable) {
-        return studentRepository.findAll(pageable).map(this::convertToDto);
+        Page<StudentResponseDto> students = studentRepository.findAll(pageable).map(this::convertToDto);
+        if (students.isEmpty()) {
+            throw new StudentNotFoundException("No students found for the requested page");
+        }
+        return students;
     }
 
     public MetaData getMetaData(Pageable pageable) {
@@ -68,7 +72,7 @@ public class StudentService {
     }
 
     public Page<StudentResponseDto> searchStudents(String name, String department, String rollNumber, Pageable pageable) {
-        return studentRepository.findAll(pageable).stream()
+        Page<StudentResponseDto> results = studentRepository.findAll(pageable).stream()
                 .filter(student -> (name == null || student.getName().contains(name)) &&
                                   (department == null || student.getDepartment().equalsIgnoreCase(department)) &&
                                   (rollNumber == null || student.getRollNumber().contains(rollNumber)))
@@ -79,6 +83,11 @@ public class StudentService {
                 .map(this::convertToDto)
                 .collect(Collectors.collectingAndThen(Collectors.toList(), 
                     list -> new org.springframework.data.domain.PageImpl<>(list, pageable, studentRepository.count())));
+        
+        if (results.isEmpty()) {
+            throw new StudentNotFoundException("No students found matching search criteria");
+        }
+        return results;
     }
 
     public Page<StudentResponseDto> changeDefaultIndex(Pageable pageable) {
